@@ -8,16 +8,29 @@
 // Minimum amount of milliseconds for each update cycle:
 #define STEP_RATE 13
 
-// Globals:
+#define STEPS_SCENE_LENGTH 200 
+#define STEPS_START 1
+#define STEPS_SCENE_1 (STEPS_START + 20) 
+#define STEPS_SCENE_2 (STEPS_SCENE_1 + STEPS_SCENE_LENGTH) 
+#define STEPS_SCENE_3 (STEPS_SCENE_2 + STEPS_SCENE_LENGTH) 
+#define STEPS_END (STEPS_SCENE_3 + STEPS_SCENE_LENGTH) 
+
+// Globals
 HINSTANCE g_hInstance;
 HWND g_hWnd;
+
+// Display dc handle
 HDC g_hDC;
+
+// Back buffer dc handle
 HDC g_hMemDC;
+
 HBITMAP g_hMemBMP;
 
-// Brushes:
-HBRUSH g_hColor1;
-HBRUSH g_hColor2;
+// Brush handles
+HBRUSH g_hColorGreen;
+HBRUSH g_hColorPink;
+HBRUSH g_hColorRed;
 HBRUSH g_hColorBlack;
 
 // Function prototypes:
@@ -31,7 +44,7 @@ bool Initialize();
 // Cleanup resources and exit process
 void Shutdown(UINT uExitCode);
 
-void UpdateScene0();
+void UpdateScene1();
 
 // Main update loop
 void Loop();
