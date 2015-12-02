@@ -172,7 +172,7 @@ void Shutdown(UINT uExitCode) {
   ExitProcess(uExitCode);
 }
 
-// -------------------------------------------------------------------------------------------------------- DRAWING HELPER FUNCTIONS
+// -------------------------------------------------------------------------------------------------------- HELPER FUNCTIONS
 
 #define BLOCK_WIDTH (WINDOW_WIDTH / 50)
 #define BLOCK_HEIGHT (WINDOW_HEIGHT / 50)
@@ -203,6 +203,16 @@ LOGBRUSH getCurrentBrush() {
   LOGBRUSH lb;
   GetObject(hbrush, sizeof(LOGBRUSH), &lb);
   return lb;
+}
+
+#define MAX_RAND 65502;
+unsigned short lfsr = 0xACE1u;
+unsigned bit;
+
+// Galois linear feedback shift register
+unsigned rand() {
+  bit = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5)) & 1;
+  return lfsr = (lfsr >> 1) | (bit << 15);
 }
 
 // -------------------------------------------------------------------------------------------------------- SCENE 1 - Title
@@ -292,9 +302,15 @@ void UpdateScene3() {
 #define SCENE_4_DISPLACEMENT_END (WINDOW_HEIGHT / 2)
 #define SCENE_4_DISPLACEMENT_STEP 5
 int scene4Displacement = 1; 
+unsigned max = 0;
 
 void UpdateScene4() {
   int percentComplete = (scene4Displacement * 100) / SCENE_4_DISPLACEMENT_END;
+
+  unsigned temp = (rand() * 255) / MAX_RAND;
+
+  HBRUSH current = CreateSolidBrush(RGB(254, 1, 154));
+  DeleteObject(current);
 
   // reset?
   scene4Displacement += SCENE_4_DISPLACEMENT_STEP;
@@ -336,9 +352,11 @@ void Loop() {
       ClearScene();
     } else if (step < STEPS_SCENE_3) {
       UpdateScene3();
-    } else if (step < STEPS_SCENE_3) {
+    } else if (step = STEPS_SCENE_3) {
       UpdateScene4();
-    } else if (step == STEPS_SCENE_3) {
+    } else if (step < STEPS_SCENE_4) {
+      UpdateScene4();
+    } else if (step == STEPS_SCENE_4) {
       step = 0; // reset
     }
 
