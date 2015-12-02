@@ -13,7 +13,8 @@
 #define STEPS_SCENE_1 (STEPS_START + 20) 
 #define STEPS_SCENE_2 (STEPS_SCENE_1 + STEPS_SCENE_LENGTH) 
 #define STEPS_SCENE_3 (STEPS_SCENE_2 + STEPS_SCENE_LENGTH) 
-#define STEPS_END (STEPS_SCENE_3 + STEPS_SCENE_LENGTH) 
+#define STEPS_SCENE_4 (STEPS_SCENE_3 + STEPS_SCENE_LENGTH) 
+#define STEPS_END (STEPS_SCENE_4 + STEPS_SCENE_LENGTH) 
 
 // Globals
 HINSTANCE g_hInstance;
@@ -31,6 +32,7 @@ HBITMAP g_hMemBMP;
 HBRUSH g_hColorGreen;
 HBRUSH g_hColorPink;
 HBRUSH g_hColorRed;
+HBRUSH g_hColorYellow;
 HBRUSH g_hColorBlack;
 
 // Function prototypes:

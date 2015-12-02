@@ -116,6 +116,7 @@ bool Initialize() {
   g_hColorGreen = CreateSolidBrush(RGB(180, 253, 11));
   g_hColorPink = CreateSolidBrush(RGB(254, 1, 154));
   g_hColorRed = CreateSolidBrush(RGB(255, 7, 58));
+  g_hColorYellow = CreateSolidBrush(RGB(255, 255, 0));
 
   g_hColorBlack = CreateSolidBrush(RGB(0, 0, 0));
 
@@ -124,6 +125,7 @@ bool Initialize() {
     || g_hColorPink == NULL
     || g_hColorRed == NULL
     || g_hColorBlack == NULL
+    || g_hColorYellow == NULL
     ) {
     return false;
   }
@@ -142,6 +144,9 @@ void Shutdown(UINT uExitCode) {
 
   if (g_hColorGreen != NULL)
     DeleteObject(g_hColorGreen);
+
+  if (g_hColorYellow != NULL)
+    DeleteObject(g_hColorYellow);
 
   if (g_hColorBlack != NULL)
     DeleteObject(g_hColorBlack);
@@ -200,7 +205,7 @@ LOGBRUSH getCurrentBrush() {
   return lb;
 }
 
-// -------------------------------------------------------------------------------------------------------- SCENE 1 
+// -------------------------------------------------------------------------------------------------------- SCENE 1 - Title
 
 #define TEXT_WIDTH 120
 
@@ -214,52 +219,44 @@ void UpdateScene1() {
   DrawText(g_hMemDC, TEXT("#####     UnEpic 4K Demo     #####"), -1, &r, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 }
 
-// -------------------------------------------------------------------------------------------------------- SCENE 2
+// -------------------------------------------------------------------------------------------------------- SCENE 2 - Triangle Pulse
 
 #define NUM_TRIANGLES 10
-#define TRIANGLE_WIDTH (WINDOW_WIDTH / NUM_TRIANGLES)
+#define TRIANGLE_WIDTH (WINDOW_WIDTH / (NUM_TRIANGLES - 2))
 #define SCENE_2_DISPLACEMENT_END (WINDOW_HEIGHT / 2)
 #define SCENE_2_DISPLACEMENT_STEP 5
-
 int scene2Displacement = 1; 
 
 void UpdateScene2() {
+  ClearScene();
+
+  int percentComplete = (scene2Displacement * 100) / SCENE_2_DISPLACEMENT_END;
   bool colorToggle = false;
   bool directionToggle = false;
-
-  int tilt = (SCENE_2_DISPLACEMENT_END / 2) - scene2Displacement >> 2;
-
+  int tilt = (SCENE_2_DISPLACEMENT_END >> 1) - scene2Displacement >> 2;
+  int shift = percentComplete - 50;
   for (int i = 0; i < NUM_TRIANGLES; ++i) {
 
     directionToggle = !directionToggle;
     int height = scene2Displacement * (directionToggle ? 1 : -1);
 
-    POINT clearPts[4] = {
-      { TRIANGLE_WIDTH * i, CENTER_Y }, 
-      { TRIANGLE_WIDTH * i, CENTER_Y + height }, 
-      { TRIANGLE_WIDTH * (i + 1), CENTER_Y + height },
-      { TRIANGLE_WIDTH * (i + 1), CENTER_Y }
-    };
-    SelectObject(g_hMemDC, g_hColorBlack);
-    Polygon(g_hMemDC, clearPts, 4);
-
     POINT trianglePts[3] = {
-      { TRIANGLE_WIDTH * i, CENTER_Y + tilt }, 
-      { (TRIANGLE_WIDTH * i) + (TRIANGLE_WIDTH >> 1), CENTER_Y + height }, 
-      { TRIANGLE_WIDTH * (i + 1), CENTER_Y - tilt }
+      { (TRIANGLE_WIDTH * i) + shift, CENTER_Y + tilt }, 
+      { (TRIANGLE_WIDTH * i) + shift + (TRIANGLE_WIDTH >> 1), CENTER_Y + height }, 
+      { (TRIANGLE_WIDTH * i) + shift + 1, CENTER_Y - tilt }
     };
     colorToggle = !colorToggle;
     SelectObject(g_hMemDC, (colorToggle) ? g_hColorPink : g_hColorGreen);
     Polygon(g_hMemDC, trianglePts, 3);
   }
 
-  // back to the start?
+  // reset?
   scene2Displacement += SCENE_2_DISPLACEMENT_STEP;
   if (scene2Displacement >= SCENE_2_DISPLACEMENT_END)
     scene2Displacement = DISPLACEMENT_START;
 }
 
-// -------------------------------------------------------------------------------------------------------- SCENE 3 
+// -------------------------------------------------------------------------------------------------------- SCENE 3 - Boxes
 
 int displacement = DISPLACEMENT_START;
 
@@ -290,6 +287,21 @@ void UpdateScene3() {
     displacement = DISPLACEMENT_START;
 }
 
+// -------------------------------------------------------------------------------------------------------- SCENE 4 - Fuzz 
+
+#define SCENE_4_DISPLACEMENT_END (WINDOW_HEIGHT / 2)
+#define SCENE_4_DISPLACEMENT_STEP 5
+int scene4Displacement = 1; 
+
+void UpdateScene4() {
+  int percentComplete = (scene4Displacement * 100) / SCENE_4_DISPLACEMENT_END;
+
+  // reset?
+  scene4Displacement += SCENE_4_DISPLACEMENT_STEP;
+  if (scene4Displacement >= SCENE_4_DISPLACEMENT_END)
+    scene4Displacement = DISPLACEMENT_START;
+}
+
 // -------------------------------------------------------------------------------------------------------- MAIN LOOP 
 
 void Loop() {
@@ -309,7 +321,7 @@ void Loop() {
       DispatchMessage(&msg);
     }
 
-    step = STEPS_SCENE_2 - 1;
+    step = STEPS_SCENE_4 - 1;
 
     // Update 
     if (step == STEPS_START) {
@@ -324,6 +336,8 @@ void Loop() {
       ClearScene();
     } else if (step < STEPS_SCENE_3) {
       UpdateScene3();
+    } else if (step < STEPS_SCENE_3) {
+      UpdateScene4();
     } else if (step == STEPS_SCENE_3) {
       step = 0; // reset
     }
