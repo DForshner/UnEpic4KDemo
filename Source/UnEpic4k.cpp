@@ -8,7 +8,7 @@
 
 #include "UnEpic4k.h"
 
-// -------------------------------------------------------------------------------------------------------- Defines 
+// -------------------------------------------------------------------------------------------------------- DEFINES 
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -29,165 +29,26 @@
 #define CENTER_X (WINDOW_WIDTH / 2)
 #define CENTER_Y (WINDOW_HEIGHT / 2)
 
-// The animation loops for two full squares of different colors
-// in either direction:
+// -------------------------------------------------------------------------------------------------------- WINDOW HELPER FUNCTIONS
 
-#define REVERSE_DISPLACEMENT 0
+// Resize the window with respect to the client area
+void ResizeClientWindow(HWND hWnd, UINT uWidth, UINT uHeight) {
+  RECT rcClient, rcWindow;
 
-#if REVERSE_DISPLACEMENT
-  #define DISPLACEMENT_START (SQUARE_THICKNESS * 2)
-  #define DISPLACEMENT_END 0
-  #define DISPLACEMENT_STEP -1
-#else
-  #define DISPLACEMENT_START 0
-  #define DISPLACEMENT_END (SQUARE_THICKNESS * 2)
-  #define DISPLACEMENT_STEP 1
-#endif
+  GetClientRect(hWnd, &rcClient);
+  GetWindowRect(hWnd, &rcWindow);
 
-// -------------------------------------------------------------------------------------------------------- Life-cycle events 
-
-// Message handler
-LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-  switch (uMsg) {
-    case WM_CLOSE:
-      PostQuitMessage(0);
-      return 0;
-    default:
-      return DefWindowProc(hWnd, uMsg, wParam, lParam);
-  }
+  MoveWindow(hWnd,
+    rcWindow.left,
+    rcWindow.top,
+    uWidth + (rcWindow.right - rcWindow.left) - rcClient.right,
+    uHeight + (rcWindow.bottom - rcWindow.top) - rcClient.bottom,
+    FALSE);
 }
 
-bool Initialize() {
+// -------------------------------------------------------------------------------------------------------- GRAPHICS HELPER FUNCTIONS
 
-  // no WinMain so get the module handle
-  g_hInstance = GetModuleHandle(NULL);
-  if (g_hInstance == NULL)
-    return false;
-
-  // register the window class
-  WNDCLASS wc;
-
-  wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
-  wc.lpfnWndProc = WndProc;
-  wc.cbClsExtra = 0;
-  wc.cbWndExtra = 0;
-  wc.hInstance = g_hInstance;
-  wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
-  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
-  wc.lpszMenuName = NULL;
-  wc.lpszClassName = WINDOW_TITLE;
-
-  if (RegisterClass(&wc) == 0)
-    return false;
-
-  // create the window:
-  g_hWnd = CreateWindow(
-    WINDOW_TITLE,                                             // class name
-    WINDOW_TITLE,                                             // title
-    WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, // style
-    CW_USEDEFAULT, CW_USEDEFAULT,                             // position
-    CW_USEDEFAULT, CW_USEDEFAULT,                             // size
-    NULL,                                                     // no parent
-    NULL,                                                     // no menu
-    g_hInstance,                                              // instance
-    NULL                                                      // no special
-    );
-
-  if (g_hWnd == NULL)
-    return false;
-
-  // setup double buffering:
-  g_hDC = GetDC(g_hWnd);
-  if (g_hDC == NULL)
-    return false;
-
-  g_hMemDC = CreateCompatibleDC(g_hDC);
-  if (g_hMemDC == NULL)
-    return false;
-
-  g_hMemBMP = CreateCompatibleBitmap(g_hDC, WINDOW_WIDTH, WINDOW_HEIGHT);
-  if (g_hMemBMP == NULL)
-    return false;
-
-  SelectObject(g_hMemDC, g_hMemBMP);
-
-  // Setup colors
-  g_hColorGreen = CreateSolidBrush(RGB(180, 253, 11));
-  g_hColorPink = CreateSolidBrush(RGB(254, 1, 154));
-  g_hColorRed = CreateSolidBrush(RGB(255, 7, 58));
-  g_hColorYellow = CreateSolidBrush(RGB(255, 255, 0));
-
-  g_hColorBlack = CreateSolidBrush(RGB(0, 0, 0));
-
-  if (
-    g_hColorGreen == NULL
-    || g_hColorPink == NULL
-    || g_hColorRed == NULL
-    || g_hColorBlack == NULL
-    || g_hColorYellow == NULL
-    ) {
-    return false;
-  }
-
-  return true;
-}
-
-void Shutdown(UINT uExitCode) {
-
-  // Release resources
-  if (g_hColorRed != NULL)
-    DeleteObject(g_hColorRed);
-
-  if (g_hColorPink != NULL)
-    DeleteObject(g_hColorPink);
-
-  if (g_hColorGreen != NULL)
-    DeleteObject(g_hColorGreen);
-
-  if (g_hColorYellow != NULL)
-    DeleteObject(g_hColorYellow);
-
-  if (g_hColorBlack != NULL)
-    DeleteObject(g_hColorBlack);
-
-  if (g_hMemBMP != NULL)
-    DeleteObject(g_hMemBMP);
-
-  if (g_hMemDC != NULL)
-    DeleteDC(g_hMemDC);
-
-  if (g_hDC != NULL)
-    ReleaseDC(g_hWnd, g_hDC);
-
-  // destroy the window and unregister the class:
-  if (g_hWnd != NULL)
-    DestroyWindow(g_hWnd);
-
-  WNDCLASS wc;
-  if (GetClassInfo(g_hInstance, WINDOW_TITLE, &wc) != 0)
-    UnregisterClass(WINDOW_TITLE, g_hInstance);
-
-  // without WinMainCRTStartup() we must exit the process ourselves:
-  ExitProcess(uExitCode);
-}
-
-// -------------------------------------------------------------------------------------------------------- HELPER FUNCTIONS
-
-#define BLOCK_WIDTH (WINDOW_WIDTH / 50)
-#define BLOCK_HEIGHT (WINDOW_HEIGHT / 50)
-
-inline void DrawBlock(int x, int y) {
-  RECT block = {
-    x * BLOCK_WIDTH,
-    y * BLOCK_HEIGHT,
-    (x + 1) * BLOCK_WIDTH ,
-    (y + 1) * BLOCK_HEIGHT
-  };
-  FillRect(g_hMemDC, &block, g_hColorGreen);
-}
-
-void ClearScene() {
+inline void ClearScene() {
   RECT r = {
     0,
     0,
@@ -205,6 +66,90 @@ LOGBRUSH getCurrentBrush() {
   return lb;
 }
 
+short intensities[WINDOW_HEIGHT * WINDOW_WIDTH];
+
+void initIntensities() {
+  // Set default intensity to zero
+  for (int i = 0; i < WINDOW_HEIGHT * WINDOW_WIDTH; ++i) {
+    intensities[i] = RGB(0, 0, 0);
+  }
+}
+
+const int MAX_INTENSITY = 255;
+DWORD firePalette[MAX_INTENSITY];
+
+// Build a pallet of 'fire' colors that can be mapped to an intensity value
+void buildPalette() {
+  for (int i = 0; i < MAX_INTENSITY; ++i) {
+    firePalette[i] = RGB(0, 0, 0);
+  }
+
+  // black to blue
+  for (int i = 0; i < 10; ++i) {
+    int percent = (i * 100) / 10;
+    int ratio = percent * MAX_INTENSITY / 100;
+    firePalette[i] = RGB(0, 0, ratio);
+  }
+
+  // blue to red
+  for (int i = 10; i < 50; ++i) {
+    int percent = ((i - 10) * 100) / (50 - 10);
+    int ratio = percent * MAX_INTENSITY / 100;
+    firePalette[i] = RGB(ratio, 0, MAX_INTENSITY - ratio);
+  }
+
+  // red to yellow
+  for (int i = 50; i < 150; ++i) {
+    int percent = ((i - 50) * 100) / (150 - 50);
+    int ratio = percent * MAX_INTENSITY / 100;
+    firePalette[i] = RGB(MAX_INTENSITY, ratio, 0);
+  }
+
+  // yellow to white
+  for (int i = 150; i < 255; ++i) {
+    int percent = ((i - 150) * 100) / (MAX_INTENSITY - 150);
+    int ratio = percent * MAX_INTENSITY / 100;
+    firePalette[i] = RGB(MAX_INTENSITY, MAX_INTENSITY, ratio);
+  }
+}
+
+HBRUSH fireBrushes[MAX_INTENSITY];
+void buildBrushes() {
+  for (int i = 0; i < MAX_INTENSITY; ++i) {
+    fireBrushes[i] = CreateSolidBrush(firePalette[i]);
+  }
+};
+
+void destroyBrushes() {
+  for (int i = 0; i < MAX_INTENSITY; ++i) {
+    if (fireBrushes[i]) {
+      DeleteObject(fireBrushes[i]);
+    }
+  }
+};
+
+#define NUM_BLOCKS_WIDTH 75 // # blocks
+#define NUM_BLOCKS_HEIGHT 75 // # blocks
+#define BLOCK_WIDTH (WINDOW_WIDTH / NUM_BLOCKS_WIDTH) // px
+#define BLOCK_HEIGHT (WINDOW_HEIGHT / NUM_BLOCKS_HEIGHT) // px
+#define BLOCK_GAP (BLOCK_WIDTH / 100) // px
+
+inline void DrawBlock(int x, int y, HBRUSH brush) {
+  RECT block = {
+    (x * BLOCK_WIDTH + 1),
+    (y * BLOCK_HEIGHT + 1),
+    ((x + 1) * BLOCK_WIDTH - 1),
+    ((y + 1) * BLOCK_HEIGHT - 1)
+  };
+  FillRect(g_hMemDC, &block, brush);
+}
+
+void DrawFireBlock(int x, int y, int intensity) {
+  DrawBlock(x, y, fireBrushes[intensity]);
+}
+
+// -------------------------------------------------------------------------------------------------------- RANDOM NUMBER GENERATOR
+
 #define MAX_RAND 65502;
 unsigned short lfsr = 0xACE1u;
 unsigned bit;
@@ -215,11 +160,245 @@ unsigned rand() {
   return lfsr = (lfsr >> 1) | (bit << 15);
 }
 
-// -------------------------------------------------------------------------------------------------------- SCENE 1 - Title
+// -------------------------------------------------------------------------------------------------------- MUSIC HELPER FUNCTIONS
+
+struct SongStep {
+  DWORD note;
+  short weight;
+};
+
+const int SCORE_LENGTH = 100;
+SongStep score[SCORE_LENGTH];
+
+#define NOTE_ON 0x00000090
+
+void initScore() {
+  // Set defaults
+  for (int i = 0; i < SCORE_LENGTH; ++i) {
+    SongStep s;
+    s.note = 0x0;
+    s.weight = 1;
+    score[i] = s;
+  }
+
+  for (int i = 1; i < 30; ++i) {
+    int volume = i * 10;
+    int tone = (i + 60);
+    DWORD cmd = NOTE_ON | (tone << 8) | (volume << 16);
+    score[i] = { cmd, (short)(volume / 5) + 10 };
+  }
+
+  for (int i = 61; i < SCORE_LENGTH; ++i) {
+    int volume = (i - 60) * 10;
+    int tone = (150 - i);
+    DWORD cmd = NOTE_ON | (tone << 8) | (volume << 16);
+    score[i] = { cmd, (short)(volume / 5) + 10 };
+  }
+};
+
+void sendMIDIEvent(HMIDIOUT hMidiOut, DWORD data) {
+  midiOutShortMsg(hMidiOut, data);
+};
+
+void sendMIDIEvent(BYTE bStatus, BYTE bData1, BYTE bData2) {
+  union {
+    DWORD 		dwData;
+    BYTE		bData[4];
+  } dwMsg;
+
+  dwMsg.bData[0] = bStatus;
+  dwMsg.bData[1] = bData1; // First MIDI data byte
+  dwMsg.bData[2] = bData2; // Second MIDI data byte
+  dwMsg.bData[3] = 0;
+
+  midiOutShortMsg(g_hMidiOut, dwMsg.dwData);
+}
+
+// -------------------------------------------------------------------------------------------------------- Life-cycle events 
+
+// Window Procedure - Message handler for messages from the window's message queue
+LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+  switch (uMsg) {
+    case WM_CLOSE:
+      PostQuitMessage(0);
+      return 0;
+    default:
+      return DefWindowProc(hWnd, uMsg, wParam, lParam);
+  }
+}
+
+WNDCLASS CreateWindowClass()
+{
+  WNDCLASS wc; // Stores info about type of window we are creating
+
+  wc.style = CS_OWNDC | CS_HREDRAW | CS_VREDRAW;
+
+  // Setup window procedure that controls our window
+  wc.lpfnWndProc = WndProc;
+
+  wc.cbClsExtra = 0;
+  wc.cbWndExtra = 0;
+  wc.hInstance = g_hInstance;
+  wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+  wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+  wc.lpszMenuName = NULL;
+  wc.lpszClassName = WINDOW_TITLE;
+
+  return wc;
+}
+
+HWND CreateMainWindow() {
+  return CreateWindow(
+    WINDOW_TITLE,                                             // class name
+    WINDOW_TITLE,                                             // title
+    WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX, // style
+    CW_USEDEFAULT, CW_USEDEFAULT,                             // position
+    CW_USEDEFAULT, CW_USEDEFAULT,                             // size
+    NULL,                                                     // no parent
+    NULL,                                                     // no menu
+    g_hInstance,                                              // instance
+    NULL                                                      // no special
+  );
+}
+
+bool Initialize() {
+
+  // no WinMain so get the module handle
+  g_hInstance = GetModuleHandle(NULL);
+  if (g_hInstance == NULL) {
+    return false;
+  }
+
+  // Register window class
+  WNDCLASS wc = CreateWindowClass();
+  if (RegisterClass(&wc) == 0) {
+    return false;
+  }
+
+  // Create the window
+  g_hWnd = CreateMainWindow();
+  if (g_hWnd == NULL) {
+    return false;
+  }
+
+  // setup double buffering:
+  g_hDC = GetDC(g_hWnd);
+  if (g_hDC == NULL) {
+    return false;
+  }
+
+  g_hMemDC = CreateCompatibleDC(g_hDC);
+  if (g_hMemDC == NULL) {
+    return false;
+  }
+
+  g_hMemBMP = CreateCompatibleBitmap(g_hDC, WINDOW_WIDTH, WINDOW_HEIGHT);
+  if (g_hMemBMP == NULL) {
+    return false;
+  }
+
+  SelectObject(g_hMemDC, g_hMemBMP);
+
+  // Setup colors
+  g_hColorGreen = CreateSolidBrush(RGB(180, 253, 11));
+  g_hColorPink = CreateSolidBrush(RGB(254, 1, 154));
+  g_hColorRed = CreateSolidBrush(RGB(255, 7, 58));
+  g_hColorYellow = CreateSolidBrush(RGB(255, 255, 0));
+  g_hColorBlack = CreateSolidBrush(RGB(0, 0, 0));
+
+  if (
+    g_hColorGreen == NULL
+    || g_hColorPink == NULL
+    || g_hColorRed == NULL
+    || g_hColorBlack == NULL
+    || g_hColorYellow == NULL
+    ) {
+    return false;
+  }
+
+  // Setup Midi device
+  UINT numDevs = midiOutGetNumDevs();	// Get the number of devices
+  UINT curDevice;
+  MIDIOUTCAPS devCaps;
+  LPMIDIOUTCAPS lpCaps = &devCaps;
+  midiOutGetDevCaps(curDevice, lpCaps, sizeof(MIDIOUTCAPS)); // Get device capabilities for first device (curDevice == 0)
+  int midiOpenResult = midiOutOpen(&g_hMidiOut, curDevice, /*(DWORD) hwnd*/(DWORD)NULL, (DWORD)NULL, /*CALLBACK_WINDOW*/ (DWORD)NULL);
+  if (midiOpenResult != MMSYSERR_NOERROR) {
+    return false; // Failed to open first device
+  }
+
+  initIntensities();
+
+  buildPalette();
+
+  initScore();
+
+  buildBrushes();
+
+  return true;
+}
+
+// Release resources and destroy window
+void Shutdown(UINT uExitCode) {
+
+  if (g_hColorRed != NULL) {
+    DeleteObject(g_hColorRed);
+  }
+
+  if (g_hColorPink != NULL) {
+    DeleteObject(g_hColorPink);
+  }
+
+  if (g_hColorGreen != NULL) {
+    DeleteObject(g_hColorGreen);
+  }
+
+  if (g_hColorYellow != NULL) {
+    DeleteObject(g_hColorYellow);
+  }
+
+  if (g_hColorBlack != NULL) {
+    DeleteObject(g_hColorBlack);
+  }
+
+  if (g_hMemBMP != NULL) {
+    DeleteObject(g_hMemBMP);
+  }
+
+  if (g_hMemDC != NULL) {
+    DeleteDC(g_hMemDC);
+  }
+
+  if (g_hDC != NULL) {
+    ReleaseDC(g_hWnd, g_hDC);
+  }
+
+  if (g_hMidiOut) {
+    midiOutClose(g_hMidiOut);
+  }
+
+  // destroy the window and unregister the class:
+  if (g_hWnd != NULL) {
+    DestroyWindow(g_hWnd);
+  }
+
+  WNDCLASS wc;
+  if (GetClassInfo(g_hInstance, WINDOW_TITLE, &wc) != 0) {
+    UnregisterClass(WINDOW_TITLE, g_hInstance);
+  }
+
+  destroyBrushes();
+
+  // without WinMainCRTStartup() we must exit the process ourselves:
+  ExitProcess(uExitCode);
+}
+
+// -------------------------------------------------------------------------------------------------------- Draw title
 
 #define TEXT_WIDTH 120
 
-void UpdateScene1() {
+void UpdateTitle() {
   RECT r = {
     CENTER_X - TEXT_WIDTH,
         CENTER_Y - 10,
@@ -229,93 +408,51 @@ void UpdateScene1() {
   DrawText(g_hMemDC, TEXT("#####     UnEpic 4K Demo     #####"), -1, &r, DT_SINGLELINE | DT_CENTER | DT_VCENTER);
 }
 
-// -------------------------------------------------------------------------------------------------------- SCENE 2 - Triangle Pulse
+// -------------------------------------------------------------------------------------------------------- Draw fire
 
-#define NUM_TRIANGLES 10
-#define TRIANGLE_WIDTH (WINDOW_WIDTH / (NUM_TRIANGLES - 2))
-#define SCENE_2_DISPLACEMENT_END (WINDOW_HEIGHT / 2)
-#define SCENE_2_DISPLACEMENT_STEP 5
-int scene2Displacement = 1; 
-
-void UpdateScene2() {
-  ClearScene();
-
-  int percentComplete = (scene2Displacement * 100) / SCENE_2_DISPLACEMENT_END;
-  bool colorToggle = false;
-  bool directionToggle = false;
-  int tilt = (SCENE_2_DISPLACEMENT_END >> 1) - scene2Displacement >> 2;
-  int shift = percentComplete - 50;
-  for (int i = 0; i < NUM_TRIANGLES; ++i) {
-
-    directionToggle = !directionToggle;
-    int height = scene2Displacement * (directionToggle ? 1 : -1);
-
-    POINT trianglePts[3] = {
-      { (TRIANGLE_WIDTH * i) + shift, CENTER_Y + tilt }, 
-      { (TRIANGLE_WIDTH * i) + shift + (TRIANGLE_WIDTH >> 1), CENTER_Y + height }, 
-      { (TRIANGLE_WIDTH * i) + shift + 1, CENTER_Y - tilt }
-    };
-    colorToggle = !colorToggle;
-    SelectObject(g_hMemDC, (colorToggle) ? g_hColorPink : g_hColorGreen);
-    Polygon(g_hMemDC, trianglePts, 3);
-  }
-
-  // reset?
-  scene2Displacement += SCENE_2_DISPLACEMENT_STEP;
-  if (scene2Displacement >= SCENE_2_DISPLACEMENT_END)
-    scene2Displacement = DISPLACEMENT_START;
-}
-
-// -------------------------------------------------------------------------------------------------------- SCENE 3 - Boxes
-
-int displacement = DISPLACEMENT_START;
-
-void UpdateScene3() {
-  // starting at the largest square that reaches the border distance
-  // draw smaller and smaller squares until we get to the center:
-  for (int i = 1, size = BORDER_DISTANCE; ; i++, size -= SQUARE_THICKNESS) {
-    int offset = size + displacement;
-
-    // stop at the center:
-    if (offset < 1)
-      break;
-
-    // GDI allows us to draw outside the window, but let's be polite...
-    RECT r = {
-        MAX(CENTER_X - offset, 0),
-        MAX(CENTER_Y - offset, 0),
-        MIN(CENTER_X + offset, WINDOW_WIDTH),
-        MIN(CENTER_Y + offset, WINDOW_HEIGHT),
-    };
-
-    FillRect(g_hMemDC, &r, i % 2 == 0 ? g_hColorGreen : g_hColorRed);
-  }
-
-  // back to the start?
-  displacement += DISPLACEMENT_STEP;
-  if (displacement == DISPLACEMENT_END)
-    displacement = DISPLACEMENT_START;
-}
-
-// -------------------------------------------------------------------------------------------------------- SCENE 4 - Fuzz 
-
-#define SCENE_4_DISPLACEMENT_END (WINDOW_HEIGHT / 2)
-#define SCENE_4_DISPLACEMENT_STEP 5
-int scene4Displacement = 1; 
+#define DISPLACEMENT_END (WINDOW_HEIGHT / 2)
+int displacement = 1;
 unsigned max = 0;
 
-void UpdateScene4() {
-  int percentComplete = (scene4Displacement * 100) / SCENE_4_DISPLACEMENT_END;
+void UpdateScene(short weight) {
+  int percentComplete = (displacement * 100) / DISPLACEMENT_END;
 
-  unsigned temp = (rand() * 255) / MAX_RAND;
+  // Seed bottom row
+  int lastRowStart = NUM_BLOCKS_WIDTH * (NUM_BLOCKS_HEIGHT - 1);
+  for (int x = 0; x < NUM_BLOCKS_WIDTH; ++x) {
+    unsigned r = (rand() * 100) / MAX_RAND;
+    intensities[lastRowStart + x] = (r < percentComplete) ? MAX_INTENSITY - 1: 0;
+  }
 
-  HBRUSH current = CreateSolidBrush(RGB(254, 1, 154));
-  DeleteObject(current);
+  // Simulate fire moving upwards from bottom to top
+  for (int y = NUM_BLOCKS_HEIGHT - 2; y > 0; --y) {
+    for (int x = 0; x < NUM_BLOCKS_WIDTH; ++x) {
+      short lowerCenter = intensities[(y + 1) * NUM_BLOCKS_WIDTH + x];
+      short center = intensities[(y) * NUM_BLOCKS_WIDTH + x];
+      short left = (x != 0) ? intensities[(y) * NUM_BLOCKS_WIDTH + (x - 1)] : 0;
+      short right = (x != NUM_BLOCKS_WIDTH - 1) ? intensities[(y) * NUM_BLOCKS_WIDTH + (x + 1)] : 0;
+      short avgTemp = (left + center + lowerCenter + right) / 4;
 
-  // reset?
-  scene4Displacement += SCENE_4_DISPLACEMENT_STEP;
-  if (scene4Displacement >= SCENE_4_DISPLACEMENT_END)
-    scene4Displacement = DISPLACEMENT_START;
+      if (avgTemp > 1) {
+        avgTemp -= 1; // Decay
+      }
+
+      intensities[(y * NUM_BLOCKS_WIDTH) + x] = avgTemp;
+    }
+  }
+
+  // Draw fire 
+  for (int x = 0; x < NUM_BLOCKS_WIDTH; ++x) {
+    for (int y = 0; y < NUM_BLOCKS_HEIGHT; ++y) {
+      short intensity = intensities[y * NUM_BLOCKS_WIDTH + x];
+      DrawFireBlock(x, y, intensity);
+    }
+  }
+
+  displacement += weight;
+  if (displacement >= DISPLACEMENT_END) {
+    displacement = 1;
+  }
 }
 
 // -------------------------------------------------------------------------------------------------------- MAIN LOOP 
@@ -337,26 +474,23 @@ void Loop() {
       DispatchMessage(&msg);
     }
 
-    step = STEPS_SCENE_4 - 1;
+    SongStep current = score[step % SCORE_LENGTH];
+
+    // Play next note in score
+    if (current.note != 0x0) {
+      sendMIDIEvent(g_hMidiOut, current.note);
+    }
 
     // Update 
     if (step == STEPS_START) {
       ClearScene();
-    } else if (step < STEPS_SCENE_1) {
-      UpdateScene1();
-    } else if (step == STEPS_SCENE_1) {
+    } else if (step < STEPS_TITLE_END) {
+      UpdateTitle();
+    } else if (step == STEPS_TITLE_END) {
       ClearScene();
-    } else if (step < STEPS_SCENE_2) {
-      UpdateScene2();
-    } else if (step == STEPS_SCENE_2) {
-      ClearScene();
-    } else if (step < STEPS_SCENE_3) {
-      UpdateScene3();
-    } else if (step = STEPS_SCENE_3) {
-      UpdateScene4();
-    } else if (step < STEPS_SCENE_4) {
-      UpdateScene4();
-    } else if (step == STEPS_SCENE_4) {
+    } else if (step < STEPS_SCENE_END) {
+      UpdateScene(current.weight);
+    } else if (step == STEPS_SCENE_END) {
       step = 0; // reset
     }
 
@@ -371,21 +505,6 @@ void Loop() {
   }
 }
 
-// A helper to resize the window with respect to the client area
-void ResizeClientWindow(HWND hWnd, UINT uWidth, UINT uHeight) {
-  RECT rcClient, rcWindow;
-
-  GetClientRect(hWnd, &rcClient);
-  GetWindowRect(hWnd, &rcWindow);
-
-  MoveWindow(hWnd,
-    rcWindow.left,
-    rcWindow.top,
-    uWidth + (rcWindow.right - rcWindow.left) - rcClient.right,
-    uHeight + (rcWindow.bottom - rcWindow.top) - rcClient.bottom,
-    FALSE);
-}
-
 void EntryPoint() {
   if (!Initialize()) {
     MessageBox(NULL, "Initialization failed.", "Error", MB_OK | MB_ICONERROR);
@@ -393,7 +512,10 @@ void EntryPoint() {
   }
 
   ResizeClientWindow(g_hWnd, WINDOW_WIDTH, WINDOW_HEIGHT);
+
   ShowWindow(g_hWnd, SW_SHOW);
+
   Loop();
+
   Shutdown(0);
 }
