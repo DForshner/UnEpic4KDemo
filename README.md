@@ -1,9 +1,8 @@
 # UnEpic4kDemo
 
-A first attempt at a 4k demo.
+A first attempt at a 4k demo.  This is a throw away project so the code is pretty bad :-).
 
 #### Screenshots
-![Screenshot1](/Screenshot1.png)
 ![Screenshot2](/Screenshot2.png)
 
 This project is based on Beluki's [4k template](https://github.com/Beluki/4k)
